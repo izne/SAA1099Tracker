@@ -39,11 +39,17 @@ export const toHex = (input: number, width?: number): string => {
   return ('00000000' + a).substr(-Math.max(width || 0, a.length));
 };
 
+// format seconds to time string
 export const toTimeString = (a: number): string => {
   const m = abs(a / 60), s = abs(a % 60);
   return ('0' + m).substr(-2) + ':' + ('0' + s).substr(-2);
 };
 
+// clamp numeric value from both sides
+export const clamp = (val: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, val));
+
+// parser of numeric value in string, with fallback and clamping
 export const validateAndClamp = ({
   value,
   radix = 10,
@@ -60,5 +66,5 @@ export const validateAndClamp = ({
   if (Number.isNaN(parsed)) {
     return initval;
   }
-  return Math.max(min, Math.min(max, parsed));
+  return clamp(parsed, min, max);
 };

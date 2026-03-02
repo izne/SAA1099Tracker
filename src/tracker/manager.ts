@@ -21,6 +21,7 @@
  */
 //---------------------------------------------------------------------------------------
 
+import { clamp, toHex, toWidth, validateAndClamp } from '../commons/number';
 import Pattern from '../player/Pattern';
 import Sample from '../player/Sample';
 import { i18n } from './doc';
@@ -38,6 +39,7 @@ interface SelectedBlock {
 
 export default class Manager extends ManagerHistory {
   private _clipboard: Clipboard;
+  public pasteSpecialTranspose: number = 0;
 
   constructor(_parent: Tracker) {
     super(_parent);
@@ -89,6 +91,98 @@ export default class Manager extends ManagerHistory {
     });
   }
 
+  private _processDataFromClipboard(content: string): Nullable<string[]> {
+    let data: string[];
+    if (content.startsWith('STMF.trk:[')) {
+      try {
+        data = JSON.parse(content.slice(9));
+      }
+      catch (e) {
+        return null;
+      }
+    }
+    else if (content.startsWith('ModPlug Tracker ')) {
+      const lines = content.split('\n|').slice(1);
+      const cmdMapper = [0xC, 1, 2, 3, 4, 3, 4, 5, 0, 9, 0xA, 0xB, 0, 0xB, 0, 0xF];
+
+      let last_volume = 0;
+      data = lines.map<string>((line) => {
+        const txtTone = line.slice(0, 3);
+        const release = txtTone === '===';
+        const smp = validateAndClamp({ value: line.slice(3, 5), min: 0, max: 31 });
+        const spc = line[5].toLowerCase();
+        const spc_data = parseInt(line.slice(6, 8), 10) || 0;
+        let tone = release || txtTone === '...' ? 0 : -1;
+        let volume = -1;
+        let pan = 0;
+        let cmd = parseInt(line.slice(8, 9), 16);
+        let cmd_data = parseInt(line.slice(9, 11), 16) || 0;
+        if (tone < 0) {
+          tone = this._parent.player.tones.findIndex((tone) => tone.txt === txtTone);
+          if (tone < 0) {
+            tone = 0;
+          }
+        }
+        switch (cmd) {
+          case 0x8:
+            pan = (cmd_data - 128) / 128;
+            cmd = cmd_data = 0;
+            break;
+          case 0xC:
+            volume = cmd_data / 4;
+            cmd = cmd_data = 0;
+            break;
+          default:
+            cmd = cmdMapper[cmd] || 0;
+            cmd_data = cmd ? cmd_data : 0;
+            break;
+        }
+        switch (spc) {
+          case 'a':
+            cmd = 0xA;
+            cmd_data = 0x10 + clamp(Math.round(spc_data / 2), 1, 7);
+            break;
+          case 'b':
+            cmd = 0xA;
+            cmd_data = 0x20 - clamp(Math.round(spc_data / 2), 1, 7);
+            break;
+          case 'v':
+            volume = spc_data / 4;
+            break;
+          case 'p':
+            pan = (spc_data - 32) / 32;
+            break;
+        }
+
+        if (volume >= 0 || pan !== 0) {
+          if (volume >= 0) {
+            last_volume = volume;
+          }
+          else {
+            volume = last_volume;
+          }
+          volume =
+            clamp(pan > 0 ? (volume * (1 - pan)) : volume, 1, 15) << 4 |
+            clamp(pan < 0 ? (volume * (1 - Math.abs(pan))) : volume, 1, 15);
+        }
+        else {
+          volume = 0;
+        }
+
+        return `${release ? '--' : toWidth(tone, 2)}${
+          smp.toString(32)
+        }0${
+          toHex(volume, 2)
+        }${
+          toHex(cmd, 1)
+        }${
+          toHex(cmd_data, 2)
+        }`.toUpperCase();
+      });
+    }
+    return (data instanceof Array && data.length > 0) ? data : null;
+  }
+
   //-------------------------------------------------------------------------------------
   public clearFromTracklist() {
     const block = this._getBlock(1);
@@ -116,18 +210,8 @@ export default class Manager extends ManagerHistory {
 
   public async pasteToTracklist(): Promise<boolean> {
     const content = await this._clipboard.readText();
-    if (!content.startsWith('STMF.trk:[')) {
-      return false;
-    }
-
-    let data: string[];
-    try {
-      data = JSON.parse(content.slice(9));
-      if (!(data instanceof Array && data.length > 0)) {
-        return false;
-      }
-    }
-    catch (e) {
+    const data = this._processDataFromClipboard(content);
+    if (!data) {
       return false;
     }
 
@@ -147,18 +231,8 @@ export default class Manager extends ManagerHistory {
 
   public async pasteSpecialCheckContent(): Promise<Pattern> {
     const content = await this._clipboard.readText();
-    if (!content.startsWith('STMF.trk:[')) {
-      return null;
-    }
-
-    let data: string[];
-    try {
-      data = JSON.parse(content.slice(9));
-      if (!(data instanceof Array && data.length > 0)) {
-        return null;
-      }
-    }
-    catch (e) {
+    const data = this._processDataFromClipboard(content);
+    if (!data) {
       return null;
     }
 
@@ -240,8 +314,9 @@ export default class Manager extends ManagerHistory {
       const srcData = pattern.data[src];
       const destData = block.pp.data[dest];
       if (parts.tone) {
-        destData.tone = srcData.tone;
         destData.release = srcData.release;
+        destData.tone = (destData.release || srcData.tone === 0) ? 0 :
+          clamp(srcData.tone + this.pasteSpecialTranspose, 1, 96);
       }
       if (parts.smp) {
         destData.smp = srcData.smp;

@@ -584,6 +584,19 @@ Tracker.prototype.populateGUI = function(app: Tracker) {
         });
       }
     }, {
+      selector: 'input[id="scPasteTrans"]',
+      method:   'each',
+      handler:  (_: number, el: HTMLInputElement) => {
+        const props = {
+          initval: 0,
+          min: -24, max: 24
+        };
+        $(el).TouchSpin(props).change((e: JQueryInputEventTarget) => {
+          const { value } = e.currentTarget;
+          app.manager.pasteSpecialTranspose = validateAndClamp({ value, ...props });
+        });
+      }
+    }, {
       selector: 'input[id^="scChnButton"]',
       method:   'each',
       handler:  (_: number, el: HTMLInputElement) => {
