@@ -145,7 +145,7 @@ Tracker.prototype.hotkeyMap = function(type: HotkeyMapType, group: string, code:
           if (process.env.NODE_ENV === 'development') {
             logHotkey('Ctrl+D - Clear/Delete');
           }
-          app.onCmdEditClear();
+          app.onCmdEditDelete();
         },
         'KeyO': () => {
           if (process.env.NODE_ENV === 'development') {

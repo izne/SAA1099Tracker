@@ -102,6 +102,7 @@ export default class Settings implements SettingsOptions {
       backup.audioInterrupt !== this.audioInterrupt
     ) {
       this.audioInit();
+      this._parent.updatePanelInfo();
       this._parent.oscilloscope.init();
     }
     if (

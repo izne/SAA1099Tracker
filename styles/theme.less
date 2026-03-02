@@ -115,6 +115,13 @@
     }
   }
 }
+.dropdown-header-warning {
+  &:extend(.dropdown-header);
+  &:extend(.alert-warning);
+  padding: (@border-radius-base * 2);
+  margin-top: -@border-radius-base;
+  margin-bottom: @border-radius-base;
+}
 
 // Buttons ====================================================================
 
@@ -134,6 +141,21 @@ button {
 .btn:focus {
   outline: 0;
   .form-control-focus();
+}
+
+.btn-block {
+  display: flex;
+  button& {
+    justify-content: center;
+    align-items: center;
+  }
+  > button.dropdown-toggle {
+    padding: 0 6px !important;
+    flex: 0 0 0;
+  }
+  > button {
+    flex: 1;
+  }
 }
 
 .btn-default,

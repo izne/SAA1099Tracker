@@ -189,7 +189,7 @@ export const parseJSON = (
     min: 0, max: data.positions.length - 1
   });
 
-  tracker.settings.audioInterrupt = data.config.interrupt === 32 ? 32 : 50;
+  tracker.settings.audioInterrupt = [32, 50, 100].includes(data.config.interrupt) ? data.config.interrupt : 50;
 
   devLog('CLI', 'JSON file successfully parsed and loaded...', JSON.stringify({
     title: data.title,

@@ -402,7 +402,7 @@ export class STMFile {
       player.loopMode = c.loopMode ?? true;
       tracker.modeEdit = c.editMode ?? false;
 
-      const int = c.interrupt === 32 ? 32 : 50;
+      const int = [32, 50, 100].includes(c.interrupt) ? c.interrupt : 50;
       if (settings.audioInterrupt !== int) {
         settings.audioInterrupt = int;
         settings.audioInit();

@@ -39,32 +39,32 @@
 								<span class="show-on-pg1">Pattern:</span>
 								<span class="show-on-pg2">Source:</span>
 							</label></div>
-							<div class="col-pp-input"><input id="scPatCurrent" type="text" class="form-control" tabindex="11"></div>
+							<div class="col-pp-input"><input id="scPatCurrent" type="text" class="form-control" tabindex="8"></div>
 						</div>
 					</div>
 					<div class="row">
-						<div class="col-buttons show-on-pg1"><button id="btPatDuplicate" type="button" class="btn btn-default btn-block" tabindex="8" data-tooltip>Duplicate</button></div>
-						<div class="col-buttons show-on-pg2"><button id="btPatProcess" type="button" class="btn btn-default btn-block" tabindex="8">Process to</button></div>
+						<div class="col-buttons show-on-pg1"><button id="btPatDuplicate" type="button" class="btn btn-default btn-block" tabindex="8" data-tooltip>Clone</button></div>
+						<div class="col-buttons show-on-pg2"><button id="btPatProcess" type="button" class="btn btn-default btn-block" tabindex="9">Process to</button></div>
 						<div class="col-label-input show-on-pg1" data-tooltip="scPatLen">
 							<div class="col-label"><label for="scPatLen" class="control-label">Length:</label></div>
 							<div class="col-pp-input"><input id="scPatLen" type="text" class="form-control" tabindex="12"></div>
 						</div>
 						<div class="col-label-input show-on-pg2" data-tooltip="scPatTarget">
 							<div class="col-label"><label for="scPatTarget" class="control-label">Target:</label></div>
-							<div class="col-pp-input"><input id="scPatTarget" type="text" class="form-control" tabindex="12"></div>
+							<div class="col-pp-input"><input id="scPatTarget" type="text" class="form-control" tabindex="10"></div>
 						</div>
 					</div>
 					<div class="row separator show-on-pg2"></div>
 					<div class="row">
-						<div class="col-buttons show-on-pg1"><button id="btPatDelete" type="button" class="btn btn-default btn-block" tabindex="9" data-tooltip>Delete</button></div>
-						<div class="col-buttons show-on-pg2"><button id="btPatClean" type="button" class="btn btn-default btn-block" tabindex="9">Clean</button></div>
+						<div class="col-buttons show-on-pg1"><button id="btPatDelete" type="button" class="btn btn-default btn-block" tabindex="9" data-tooltip>Remove</button></div>
+						<div class="col-buttons show-on-pg2"><button id="btPatWipeUnused" type="button" class="btn btn-default btn-block" tabindex="11" data-tooltip>Wipe Unused</button></div>
 						<div class="col-label-input show-on-pg1" data-tooltip="txPatternUsed">
 							<div class="col-label"><label class="control-label">Used:</label></div>
 							<div class="col-pp-input"><input id="txPatternUsed" type="text" value="0" class="form-control" disabled="disabled" tabindex="-1"></div>
 						</div>
 						<div class="col-buttons-right show-on-pg2">
-							<button id="btPatCompress" type="button" class="btn btn-default thin left" tabindex="12">Compress</button>
-							<button id="btPatExpand" type="button" class="btn btn-default right" tabindex="12">Expand</button>
+							<button id="btPatCompress" type="button" class="btn btn-default left" tabindex="12" data-tooltip>Compr.</button>
+							<button id="btPatExpand" type="button" class="btn btn-default right" tabindex="12" data-tooltip>Expand</button>
 						</div>
 					</div>
 					<div class="row separator show-on-pg1"></div>
@@ -74,7 +74,10 @@
 							<div class="col-label"><label class="control-label">Total:</label></div>
 							<div class="col-pp-input"><input id="txPatternTotal" type="text" value="0" class="form-control" disabled="disabled" tabindex="-1"></div>
 						</div>
-						<div class="col-buttons-right show-on-pg2"><button id="btPatOptimize" type="button" class="btn btn-default btn-block" tabindex="12">Optimize patt. data</button></div>
+						<div class="col-buttons-right show-on-pg2">
+							<button id="btPatClean" type="button" class="btn btn-default left" tabindex="13" data-tooltip>Clean</button>
+							<button id="btPatOptimize" type="button" class="btn btn-default right" tabindex="13" data-tooltip>Optimize</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -93,14 +96,36 @@
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-buttons"><button id="btPosDuplicate" type="button" class="btn btn-default btn-block" tabindex="14" data-tooltip>Duplicate</button></div>
+								<div class="col-buttons">
+									<div class="btn-group btn-block dropdown">
+										<button id="btPosDuplicate" type="button" class="btn btn-default" tabindex="14" data-tooltip>Clone</button>
+										<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+										<ul class="dropdown-menu">
+											<li><a id="diPosDuplicateInPlace" name="diPosDuplicate" data-function="inPlace">Clone in place</a></li>
+											<li><a id="diPosDuplicateToStart" name="diPosDuplicate" data-function="toStart">Clone &amp; Put at the Start</a></li>
+											<li><a id="diPosDuplicateToEnd" name="diPosDuplicate" data-function="toEnd">Clone &amp; Put at the End</a></li>
+										</ul>
+									</div>
+								</div>
 								<div class="col-label-input" data-tooltip="scPosLength">
 									<div class="col-label"><label for="scPosLength" class="control-label">Length:</label></div>
 									<div class="col-pp-input"><input id="scPosLength" type="text" class="form-control" tabindex="19"></div>
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-buttons"><button id="btPosDelete" type="button" class="btn btn-default btn-block" tabindex="15" data-tooltip>Delete</button></div>
+								<div class="col-buttons">
+									<div class="btn-group btn-block dropdown">
+										<button id="btPosDelete" type="button" class="btn btn-default" tabindex="15" data-tooltip>Remove</button>
+										<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+										<ul class="dropdown-menu">
+											<li class="dropdown-header-warning">⚠️ <b>Warning!</b> These actions are irreversible.</li>
+											<li><a id="diPosDeleteAfter" name="diPosDelete" data-function="allAter">All positions after this</a></li>
+											<li><a id="diPosDeleteBefore" name="diPosDelete" data-function="allBefore">All positions before this</a></li>
+											<li><a id="diPosDeleteExcept" name="diPosDelete" data-function="except">All except current</a></li>
+											<li><a id="diPosDeleteAll" name="diPosDelete" data-function="all">Clean all</a></li>
+										</ul>
+									</div>
+								</div>
 								<div class="col-label-input" data-tooltip="scPosSpeed">
 									<div class="col-label"><label for="scPosSpeed" class="control-label">Speed:</label></div>
 									<div class="col-pp-input"><input id="scPosSpeed" type="text" class="form-control" tabindex="20"></div>
@@ -146,7 +171,7 @@
 									<div class="col-chn-input"><input id="scChnPattern6" type="text" class="form-control" tabindex="33"></div>
 								</div>
 								<div class="row" data-tooltip="scChnTrans">
-									<div class="col-label"><label class="control-label">Transpose:</label></div>
+									<div class="col-label"><label class="control-label">Transp.:</label></div>
 									<div class="col-chn-input"><input id="scChnTrans1" type="text" class="form-control" tabindex="34"></div>
 									<div class="col-chn-input"><input id="scChnTrans2" type="text" class="form-control" tabindex="35"></div>
 									<div class="col-chn-input"><input id="scChnTrans3" type="text" class="form-control" tabindex="36"></div>
