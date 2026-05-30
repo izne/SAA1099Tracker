@@ -24,6 +24,7 @@
 //---------------------------------------------------------------------------------------
 
 import { devLog } from '../../commons/dev';
+import SerialStreamer from '../../commons/SerialStreamer';
 import { SAAAmp } from './SAAAmp';
 import { SAAEnv } from './SAAEnv';
 import { SAAFreq } from './SAAFreq';
@@ -58,6 +59,7 @@ export class SAASound {
 
   private _register: number = 0;
   private _ampMuted: boolean[] = [ false, false, false, false, false, false ];
+  private _serialStreamer: SerialStreamer | null = null;
 
   private _env: SAAEnv[];
   private _noise: SAANoise[];
@@ -95,6 +97,14 @@ export class SAASound {
 
     this.reset();
     devLog('SAASound', 'Chip emulation initialized...');
+  }
+
+  public setSerialStreamer(streamer: SerialStreamer | null): void {
+    this._serialStreamer = streamer;
+  }
+
+  public getSerialStreamer(): SerialStreamer | null {
+    return this._serialStreamer;
   }
 
   public reset() {
@@ -272,8 +282,8 @@ export class SAASound {
   /**
 	 * fill all registers and (un)mute all channels
 	 * @param data SAASoundRegData
-	 */
-  public setAllRegs(data: SAASoundRegData) {
+ 	 */
+  public setAllRegs(data: SAASoundRegData, positionInfo?: { pattern: number; row: number }) {
     if (data.regs) {
       Object.keys(data.regs).forEach(key => {
         const reg: number = parseInt(key.substr(1), 16);
@@ -281,6 +291,11 @@ export class SAASound {
 
         this.setRegData(reg, dat);
       }, this);
+
+      // Stream register data to hardware if enabled
+      if (this._serialStreamer) {
+        this._serialStreamer.sendFrame(data.regs, positionInfo);
+      }
     }
 
     if (data.muted) {
