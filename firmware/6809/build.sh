@@ -7,14 +7,21 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+# Get program name
 NAME="$1"
+ADDR=0400
 
-cmoc.exe -S --void-target -nodefaultlibs --no-relocate --org=0x0400 "${NAME}.c"
+# CMOC translation to assembler
+cmoc -S --void-target -nodefaultlibs --no-relocate --org="0x${ADDR}" "${NAME}.c"
 
+# Remove top 20 lines
 sed -i '1,20d' "${NAME}.s"
 
+# Create object file
 lwasm --obj -o "${NAME}.o" "${NAME}.s"
 
-lwlink "${NAME}.o" --format=srec --entry=_main --section-base=code=0400 --output="${NAME}.s19"
+# Link to SREC
+lwlink "${NAME}.o" --format=srec --entry=_main --section-base=code="${ADDR}" --output="${NAME}.s19"
 
-/z/6809sbc/Debug/6809sbc.exe --load "${NAME}.s19" --load-addr 0x0400 --rom /z/AC6309/ROMs/combined.bin
+# Run the compiled program in the 6809sbc emulator
+/z/6809sbc/Debug/6809sbc --load "${NAME}.s19" --load-addr "0x${ADDR}" --rom /z/AC6309/ROMs/combined.bin
