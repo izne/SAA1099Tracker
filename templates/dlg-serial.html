@@ -1,0 +1,69 @@
+<div class="modal" id="serial" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" tabindex="-1">&times;</button>
+				<h4 class="modal-title">Hardware Output</h4>
+			</div>
+			<div class="modal-body">
+				<div class="container-fluid">
+					<div class="panel panel-default">
+						<div class="panel-heading"><h5 class="panel-title">Serial Connection</h5></div>
+						<div class="panel-body">
+							<div class="form-group">
+								<label for="serial-status" class="control-label">Status:</label>
+								<span id="serial-status" class="label label-default">Disconnected</span>
+							</div>
+							<div class="form-group">
+								<label class="control-label">Port:</label>
+								<div id="serial-port-info" class="form-control-static text-muted">Not connected</div>
+							</div>
+							<div class="form-group">
+								<label class="control-label">Mode:</label>
+								<select id="serial-mode" class="form-control">
+									<option value="software" selected>Software Only</option>
+									<option value="hardware">Hardware Only</option>
+									<option value="both">Both</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="control-label">Available Ports:</label>
+								<select id="serial-ports" class="form-control">
+									<option value="">-- Select or Request New Port --</option>
+								</select>
+							</div>
+							<div class="btn-group">
+								<button id="serial-refresh" class="btn btn-default">Refresh Ports</button>
+								<button id="serial-connect" class="btn btn-primary">Connect New Port</button>
+								<button id="serial-disconnect" class="btn btn-danger" style="display: none;">Disconnect</button>
+							</div>
+							<div id="serial-error" class="alert alert-danger" style="display: none; margin-top: 10px;"></div>
+						</div>
+					</div>
+					<div class="panel panel-default">
+						<div class="panel-heading"><h5 class="panel-title">Statistics</h5></div>
+						<div class="panel-body">
+							<div class="row">
+								<div class="col-xs-6">Frames sent:</div>
+								<div class="col-xs-6" id="serial-frames">0</div>
+							</div>
+							<div class="row">
+								<div class="col-xs-6">Bytes sent:</div>
+								<div class="col-xs-6" id="serial-bytes">0</div>
+							</div>
+						</div>
+					</div>
+					<div class="panel panel-default">
+						<div class="panel-heading"><h5 class="panel-title">Last Frame Data (hex)</h5></div>
+						<div class="panel-body">
+							<div id="serial-last-frame" style="font-family: monospace; font-size: 10px; word-break: break-all;">--</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-default" type="button" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>

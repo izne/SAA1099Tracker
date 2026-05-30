@@ -1,6 +1,7 @@
 /**
  * SAA1099Tracker: All handlers and control function prototypes.
  * Copyright (c) 2012-2025 Martin Borik <martin@borik.net>
+ * Copyright (c) 2026 Dimitar Angelov
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -404,7 +405,7 @@ Tracker.prototype.onCmdFileCompile = function() {
   this.compiler.show();
 };
 //---------------------------------------------------------------------------------------
-Tracker.prototype.onCmdEditDelete = function() {
+Tracker.prototype.onCmdEditClear = function() {
   if (this.activeTab === 0 && this.modeEdit) {
     this.manager.clearFromTracklist();
     this.player.countPositionFrames(this.player.position);
@@ -711,6 +712,197 @@ Tracker.prototype.onCmdAbout = function() {
   }
 
   dialog.modal('toggle');
+};
+//---------------------------------------------------------------------------------------
+Tracker.prototype.onCmdHardwareSerial = function() {
+  const keys = this.globalKeyState;
+  const dialog = $('#serial');
+  const data = dialog.data();
+  let updateInterval: number | null = null;
+
+  if (!data.hasOwnProperty('bs.modal')) {
+    // Inject debug panel if it doesn't exist
+    if ($('#serial-debug-log').length === 0) {
+      $('#serial .container-fluid').append(
+        '<div class="panel panel-default">' +
+        '<div class="panel-heading"><h5 class="panel-title" style="display: inline;">Debug Log</h5>' +
+        '<button id="serial-clear-log" class="btn btn-xs btn-default pull-right">Clear</button></div>' +
+        '<div class="panel-body"><div id="serial-debug-log" style="font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto; background: #f5f5f5; padding: 8px; border-radius: 3px; min-height: 50px;"></div></div>' +
+        '</div>'
+      );
+    }
+
+    dialog
+      .on('show.bs.modal', async () => {
+        keys.inDialog = true;
+
+        // Just try to use navigator.serial directly - like working example
+        try {
+          const ports = await navigator.serial.getPorts();
+          $('#serial-port-info').html('WebSerial: OK<br><small>Permission ports: ' + ports.length + '</small>');
+
+          // Try auto-reconnect to previously used port (like working example)
+          if (!this.serialStreamer.isConnected()) {
+            const reconnected = await this.serialStreamer.tryAutoReconnect();
+            if (reconnected) {
+              $('#serial-error').text('Auto-reconnected to previous port!').show();
+            }
+            else {
+              $('#serial-error').hide();
+            }
+          }
+        }
+        catch (e) {
+          $('#serial-port-info').html('WebSerial: ERROR<br><small>' + e + '</small>');
+        }
+
+        this.updateSerialPanel();
+
+        // Start periodic updates
+        updateInterval = window.setInterval(() => {
+          this.updateSerialPanel();
+        }, 500);
+      })
+      .on('hidden.bs.modal', () => {
+        $(dialog).off();
+        keys.inDialog = false;
+        // Stop periodic updates
+        if (updateInterval) {
+          clearInterval(updateInterval);
+          updateInterval = null;
+        }
+      });
+
+    // Wire up button handlers - EXACTLY like working example pattern
+    $('#serial-connect').on('click', async () => {
+      $('#serial-error').hide();
+      const debugLog = $('#serial-debug-log');
+      debugLog.html(''); // Clear previous log
+
+      const log = (msg: string) => {
+        debugLog.append('<div style="margin-bottom: 2px;">' + msg + '</div>');
+        debugLog.scrollTop(debugLog[0].scrollHeight);
+      };
+
+      log('<b>Starting connection...</b>');
+
+      // Debug: Check context
+      log('location.protocol: ' + location.protocol);
+      log('location.hostname: ' + location.hostname);
+
+      // Check if we're in a secure context
+      const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      const isSecure = location.protocol === 'https:' || isLocalhost;
+
+      if (!isSecure) {
+        log('<span style="color: red;">ERROR: WebSerial requires HTTPS or localhost!</span>');
+        log('<span style="color: orange;">Please access via http://localhost:3000</span>');
+        $('#serial-error').html('WebSerial API requires secure context.<br>Please use: <b>http://localhost:3000</b>').show();
+        return;
+      }
+
+      try {
+        // Just try to use it like the working example - no checks!
+        log('Trying navigator.serial.requestPort()...');
+        const port = await (navigator as any).serial.requestPort();
+        log('<span style="color: green;">Port selected!</span>');
+
+        // Close existing connection if any (like working example)
+        if (this.serialStreamer.isConnected()) {
+          log('Closing existing connection...');
+          await this.serialStreamer.disconnect();
+        }
+
+        log('Opening port at 115200 baud...');
+        // Open the port with 115200 baud (exactly like working example)
+        await port.open({ baudRate: 115200 });
+        log('<span style="color: green;">Port opened successfully!</span>');
+
+        // Now use our SerialStreamer to manage the connected port
+        log('Connecting to streamer...');
+        const success = await this.serialStreamer.connect(115200, port);
+
+        if (success) {
+          log('<span style="color: green;"><b>Connected successfully!</b></span>');
+          this.updateSerialPanel();
+          this.updateSerialPortList();
+        }
+        else {
+          log('<span style="color: red;">Streamer connection failed</span>');
+        }
+      }
+      catch (error) {
+        const msg = (error as Error).message;
+        log('<span style="color: red;">ERROR: ' + msg + '</span>');
+        $('#serial-error').text('Error: ' + msg).show();
+      }
+    });
+
+    $('#serial-disconnect').on('click', () => {
+      this.serialStreamer.disconnect();
+      this.updateSerialPanel();
+    });
+
+    $('#serial-refresh').on('click', () => {
+      this.updateSerialPortList();
+    });
+
+    $('#serial-mode').on('change', (e) => {
+      const mode = $(e.target).val() as 'software' | 'hardware' | 'both';
+      this.serialStreamer.setMode(mode);
+    });
+
+    // Initial port list update
+    this.updateSerialPortList();
+  }
+
+  dialog.modal('toggle');
+};
+//---------------------------------------------------------------------------------------
+Tracker.prototype.updateSerialPortList = async function() {
+  const ports = await this.serialStreamer.getAvailablePorts();
+  const select = $('#serial-ports');
+
+  // Keep the first option (placeholder)
+  select.find('option:not(:first)').remove();
+
+  ports.forEach((port, index) => {
+    const info = port.getInfo();
+    const vendorId = info.usbVendorId ? '0x' + info.usbVendorId.toString(16).padStart(4, '0') : null;
+    const productId = info.usbProductId ? '0x' + info.usbProductId.toString(16).padStart(4, '0') : null;
+    const text = vendorId && productId
+      ? `USB Device (${vendorId}:${productId})`
+      : 'Serial Port';
+    select.append($('<option>', { value: index, text }));
+  });
+
+  if (ports.length === 0) {
+    select.append($('<option>', { value: '', text: 'No previously connected ports', disabled: true }));
+  }
+};
+//---------------------------------------------------------------------------------------
+Tracker.prototype.updateSerialPanel = function() {
+  const streamer = this.serialStreamer;
+  const isConnected = streamer.isConnected();
+  const stats = streamer.getStats();
+
+  // Just show the UI - let the button click handle the actual check
+  // This matches the working examples that just try and catch errors
+  $('#serial-status')
+    .text(isConnected ? 'Connected' : 'Disconnected')
+    .removeClass('label-default label-success label-danger')
+    .addClass(isConnected ? 'label-success' : 'label-default');
+
+  $('#serial-port-info').text(stats.portName || 'Not connected');
+  $('#serial-connect').toggle(!isConnected);
+  $('#serial-disconnect').toggle(isConnected);
+  $('#serial-frames').text(stats.framesSent);
+  $('#serial-bytes').text(stats.bytesSent);
+  $('#serial-last-frame').text(stats.lastFrameData || '--');
+
+  if (stats.error) {
+    $('#serial-error').text(stats.error).show();
+  }
 };
 //---------------------------------------------------------------------------------------
 Tracker.prototype.onCmdPreferences = function() {
@@ -1173,77 +1365,6 @@ Tracker.prototype.onCmdPatOptimize = function() {
   });
 };
 //---------------------------------------------------------------------------------------
-Tracker.prototype.onCmdPatWipeUnused = function() {
-  if (this.modePlay) {
-    return;
-  }
-
-  const app = this;
-  const p = this.player;
-  const keys = this.globalKeyState;
-
-  keys.inDialog = true;
-  $('#dialog').confirm({
-    title: i18n.dialog.pattern.unused.title,
-    html: i18n.dialog.pattern.unused.msg,
-    buttons: 'yesno',
-    style: 'warning',
-    callback: (btn) => {
-      keys.inDialog = false;
-      if (btn !== 'yes') {
-        return;
-      }
-
-      this.manager.historyClear();
-
-      // prepare list of numbers of used patterns
-      let patUsageSet = p.positions.reduce<Set<number>>(
-        (set, posData) => {
-          for (let i = 0; i < 6; i++) {
-            const pn = posData.ch[i].pattern;
-            if (pn > 0) {
-              set.add(pn);
-            }
-          }
-          return set;
-        }, new Set<number>());
-
-      // remove unused patterns
-      if (patUsageSet.size < p.patterns.length - 1) {
-        let pt = 0;
-        do {
-          for (pt = p.patterns.length - 1; pt > 0; pt--) {
-            if (patUsageSet.has(pt)) {
-              continue;
-            }
-
-            // renumber
-            for (let i = 0, l = p.positions.length, pos, chn; i < l; i++) {
-              for (pos = p.positions[i], chn = 0; chn < 6; chn++) {
-                if (pos.ch[chn].pattern === pt) {
-                  pos.ch[chn].pattern = 0;
-                }
-                else if (pos.ch[chn].pattern > pt) {
-                  pos.ch[chn].pattern--;
-                }
-              }
-            }
-            patUsageSet = new Set<number>(
-              [...patUsageSet].map(item => (item > pt) ? item - 1 : item)
-            );
-
-            p.patterns.splice(pt, 1);
-            break;
-          }
-        } while (pt > 0);
-      }
-
-      app.workingPattern = 0;
-      app.updateAfterActionButton();
-    }
-  });
-};
-//---------------------------------------------------------------------------------------
 Tracker.prototype.onCmdPosCreate = function() {
   if (this.modePlay) {
     return;
@@ -1267,7 +1388,7 @@ Tracker.prototype.onCmdPosCreate = function() {
   this.updateAfterActionButton();
 };
 //---------------------------------------------------------------------------------------
-Tracker.prototype.onCmdPosDuplicate = function(fn?: 'inPlace' | 'toStart' | 'toEnd') {
+Tracker.prototype.onCmdPosDuplicate = function() {
   if (this.modePlay) {
     return;
   }
@@ -1285,36 +1406,22 @@ Tracker.prototype.onCmdPosDuplicate = function(fn?: 'inPlace' | 'toStart' | 'toE
     pt.ch[chn].pitch = current.ch[chn].pitch;
   }
 
-  let newPos = i + 1;
-  switch (fn) {
-    case 'inPlace':
-      newPos = i;
-      break;
-    case 'toStart':
-      newPos = 0;
-      break;
-    case 'toEnd':
-      newPos = p.positions.length;
-      break;
-  }
-
   this.manager.historyPush({
     position: {
       type: 'create',
-      index: newPos
+      index: i
     }
   });
 
-  p.positions.splice(newPos, 0, pt);
-  p.countPositionFrames(newPos);
-  p.storePositionRuntime(newPos);
-  p.position = newPos;
+  p.positions.splice(i, 0, pt);
+  p.countPositionFrames(i);
+  p.storePositionRuntime(i);
   p.line = 0;
 
   this.updateAfterActionButton();
 };
 //---------------------------------------------------------------------------------------
-Tracker.prototype.onCmdPosDelete = function(fn?: 'allAter' | 'allBefore' | 'except' | 'all') {
+Tracker.prototype.onCmdPosDelete = function() {
   if (this.modePlay || !this.player.positions.length) {
     return;
   }
@@ -1326,54 +1433,32 @@ Tracker.prototype.onCmdPosDelete = function(fn?: 'allAter' | 'allBefore' | 'exce
   keys.inDialog = true;
   $('#dialog').confirm({
     title: i18n.dialog.position.delete.title,
-    html: i18n.dialog.position.delete.msg[fn ? 'more' : 'one'],
+    text: i18n.dialog.position.delete.msg,
     buttons: 'yesno',
-    style: fn ? 'warning' : 'info',
+    style: 'info',
     callback: (btn) => {
       keys.inDialog = false;
       if (btn !== 'yes') {
         return;
       }
 
-      if (fn) {
-        this.manager.historyClear();
-
-        switch (fn) {
-          case 'allAter':
-            app.player.positions.splice(pos + 1);
-            break;
-          //@ts-ignore no-break
-          case 'except':
-            app.player.positions.splice(pos + 1);
-          case 'allBefore':
-            app.player.positions.splice(0, pos);
-            app.player.position = 0;
-            break;
-          case 'all':
-            app.player.positions.splice(0);
-            app.player.position = 0;
-            break;
+      const { ch, length, speed } = app.player.positions[pos];
+      app.manager.historyPush({
+        position: {
+          type: 'remove',
+          index: pos,
+          data: ch,
+          length,
+          speed,
         }
-      }
-      else {
-        const { ch, length, speed } = app.player.positions[pos];
-        app.manager.historyPush({
-          position: {
-            type: 'remove',
-            index: pos,
-            data: ch,
-            length,
-            speed,
-          }
-        });
-
-        app.player.positions.splice(pos, 1);
-        if (pos >= app.player.positions.length) {
-          app.player.position--;
-        }
-      }
+      });
 
       app.player.line = 0;
+      app.player.positions.splice(pos, 1);
+      if (pos >= app.player.positions.length) {
+        app.player.position--;
+      }
+
       app.updateAfterActionButton();
     }
   });

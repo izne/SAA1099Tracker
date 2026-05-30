@@ -23,6 +23,7 @@
 
 import AudioDriver from '../commons/audio';
 import { devLog } from '../commons/dev';
+import SerialStreamer from '../commons/SerialStreamer';
 import SyncTimer from '../commons/timer';
 import Compiler from '../compiler';
 import { SAASound } from '../libs/SAASound';
@@ -89,6 +90,7 @@ export default class Tracker {
   player: Player;
   file: File;
   compiler: Compiler;
+  serialStreamer: SerialStreamer;
 
   updatePanels: (this: Tracker) => void;
   updateAfterActionButton: (this: Tracker) => void;
@@ -103,7 +105,7 @@ export default class Tracker {
   onCmdAppUpdate: (this: Tracker, status: Error, data: any) => void;
   onCmdAppExit: (this: Tracker) => void;
   onCmdAbout: (this: Tracker) => void;
-  onCmdEditDelete: (this: Tracker) => void;
+  onCmdEditClear: (this: Tracker) => void;
   onCmdEditCopy: (this: Tracker) => Promise<void>;
   onCmdEditCopyAsTracklist: (this: Tracker) => Promise<void>;
   onCmdEditCut: (this: Tracker) => void;
@@ -138,15 +140,17 @@ export default class Tracker {
   onCmdPatCompress: (this: Tracker) => void;
   onCmdPatExpand: (this: Tracker) => void;
   onCmdPatOptimize: (this: Tracker) => void;
-  onCmdPatWipeUnused: (this: Tracker) => void;
   onCmdPosCreate: (this: Tracker) => void;
-  onCmdPosDelete: (this: Tracker, fn?: string) => void;
-  onCmdPosDuplicate: (this: Tracker, fn?: string) => void;
+  onCmdPosDelete: (this: Tracker) => void;
+  onCmdPosDuplicate: (this: Tracker) => void;
   onCmdPosMoveDown: (this: Tracker) => void;
   onCmdPosMoveUp: (this: Tracker) => void;
   onCmdPosPlay: (this: Tracker) => void;
   onCmdPosPlayStart: (this: Tracker) => void;
   onCmdShowDocumentation: (this: Tracker, name: string) => void;
+  onCmdHardwareSerial: (this: Tracker) => void;
+  updateSerialPanel: (this: Tracker) => void;
+  updateSerialPortList: (this: Tracker) => Promise<void>;
   onCmdSmpClear: (this: Tracker) => void;
   onCmdSmpCopyLR: (this: Tracker) => void;
   onCmdSmpCopyRL: (this: Tracker) => void;
@@ -191,6 +195,9 @@ export default class Tracker {
       AudioDriver.sampleRate,
       app.oscilloscope.consume.bind(app.oscilloscope)
     );
+
+    app.serialStreamer = new SerialStreamer();
+    SAASoundInstance.setSerialStreamer(app.serialStreamer);
 
     app.player = new Player(SAASoundInstance);
     app.settings.init();

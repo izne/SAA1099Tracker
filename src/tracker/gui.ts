@@ -347,7 +347,7 @@ Tracker.prototype.populateGUI = function(app: Tracker) {
           onstyle: 'default',
           offstyle: 'default',
           size: 'mini',
-          width: 86,
+          width: 79,
           height: 24
         }).change((e: JQueryInputEventTarget) => {
           const el = e.currentTarget;
@@ -581,19 +581,6 @@ Tracker.prototype.populateGUI = function(app: Tracker) {
           }
 
           app.file.modified = true;
-        });
-      }
-    }, {
-      selector: 'input[id="scPasteTrans"]',
-      method:   'each',
-      handler:  (_: number, el: HTMLInputElement) => {
-        const props = {
-          initval: 0,
-          min: -24, max: 24
-        };
-        $(el).TouchSpin(props).change((e: JQueryInputEventTarget) => {
-          const { value } = e.currentTarget;
-          app.manager.pasteSpecialTranspose = validateAndClamp({ value, ...props });
         });
       }
     }, {
@@ -1139,27 +1126,12 @@ Tracker.prototype.populateGUI = function(app: Tracker) {
         }
       }
     }, {
-      selector: 'a[id^="diPos"]',
-      method:   'click',
-      handler:  (e: JQueryMouseEventObject) => {
-        const el = e.currentTarget as Element & { name: string };
-        const name = (el.name ?? el.id).replace(/^di/, 'onCmd');
-        const method = app[name as keyof Tracker] as any;
-        const data = $(el).data();
-        const fn = [];
-        if (data['function']) {
-          fn.push(data['function']);
-        }
-        method.apply(app, fn);
-      }
-    }, {
       selector: 'button[id^="btPos"],button[id^="btPat"]',
       method:   'click',
       handler:  (e: JQueryMouseEventObject) => {
-        const el = e.currentTarget;
-        const name = el.id.replace(/^bt/, 'onCmd');
-        const method = app[name as keyof Tracker] as any;
-        method.apply(app);
+        const id = e.currentTarget.id;
+        const name = id.replace(/^bt/, 'onCmd');
+        (app as any)[name]?.();
       }
     }, {
       selector: 'button[id^="btSample"]',
