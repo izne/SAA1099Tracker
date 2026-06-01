@@ -105,7 +105,7 @@ export default class Tracker {
   onCmdAppUpdate: (this: Tracker, status: Error, data: any) => void;
   onCmdAppExit: (this: Tracker) => void;
   onCmdAbout: (this: Tracker) => void;
-  onCmdEditClear: (this: Tracker) => void;
+  onCmdEditDelete: (this: Tracker) => void;
   onCmdEditCopy: (this: Tracker) => Promise<void>;
   onCmdEditCopyAsTracklist: (this: Tracker) => Promise<void>;
   onCmdEditCut: (this: Tracker) => void;
@@ -140,9 +140,10 @@ export default class Tracker {
   onCmdPatCompress: (this: Tracker) => void;
   onCmdPatExpand: (this: Tracker) => void;
   onCmdPatOptimize: (this: Tracker) => void;
+  onCmdPatWipeUnused: (this: Tracker) => void;
   onCmdPosCreate: (this: Tracker) => void;
-  onCmdPosDelete: (this: Tracker) => void;
-  onCmdPosDuplicate: (this: Tracker) => void;
+  onCmdPosDelete: (this: Tracker, fn?: string) => void;
+  onCmdPosDuplicate: (this: Tracker, fn?: string) => void;
   onCmdPosMoveDown: (this: Tracker) => void;
   onCmdPosMoveUp: (this: Tracker) => void;
   onCmdPosPlay: (this: Tracker) => void;
@@ -198,6 +199,7 @@ export default class Tracker {
 
     app.serialStreamer = new SerialStreamer();
     SAASoundInstance.setSerialStreamer(app.serialStreamer);
+
 
     app.player = new Player(SAASoundInstance);
     app.settings.init();
