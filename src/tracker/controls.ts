@@ -1,7 +1,6 @@
 /**
  * SAA1099Tracker: All handlers and control function prototypes.
  * Copyright (c) 2012-2025 Martin Borik <martin@borik.net>
- * Copyright (c) 2026 Dimitar Angelov
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -405,7 +404,7 @@ Tracker.prototype.onCmdFileCompile = function() {
   this.compiler.show();
 };
 //---------------------------------------------------------------------------------------
-Tracker.prototype.onCmdEditClear = function() {
+Tracker.prototype.onCmdEditDelete = function() {
   if (this.activeTab === 0 && this.modeEdit) {
     this.manager.clearFromTracklist();
     this.player.countPositionFrames(this.player.position);
