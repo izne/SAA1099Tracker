@@ -1364,6 +1364,77 @@ Tracker.prototype.onCmdPatOptimize = function() {
   });
 };
 //---------------------------------------------------------------------------------------
+Tracker.prototype.onCmdPatWipeUnused = function() {
+  if (this.modePlay) {
+    return;
+  }
+
+  const app = this;
+  const p = this.player;
+  const keys = this.globalKeyState;
+
+  keys.inDialog = true;
+  $('#dialog').confirm({
+    title: i18n.dialog.pattern.unused.title,
+    html: i18n.dialog.pattern.unused.msg,
+    buttons: 'yesno',
+    style: 'warning',
+    callback: (btn) => {
+      keys.inDialog = false;
+      if (btn !== 'yes') {
+        return;
+      }
+
+      this.manager.historyClear();
+
+      // prepare list of numbers of used patterns
+      let patUsageSet = p.positions.reduce<Set<number>>(
+        (set, posData) => {
+          for (let i = 0; i < 6; i++) {
+            const pn = posData.ch[i].pattern;
+            if (pn > 0) {
+              set.add(pn);
+            }
+          }
+          return set;
+        }, new Set<number>());
+
+      // remove unused patterns
+      if (patUsageSet.size < p.patterns.length - 1) {
+        let pt = 0;
+        do {
+          for (pt = p.patterns.length - 1; pt > 0; pt--) {
+            if (patUsageSet.has(pt)) {
+              continue;
+            }
+
+            // renumber
+            for (let i = 0, l = p.positions.length, pos, chn; i < l; i++) {
+              for (pos = p.positions[i], chn = 0; chn < 6; chn++) {
+                if (pos.ch[chn].pattern === pt) {
+                  pos.ch[chn].pattern = 0;
+                }
+                else if (pos.ch[chn].pattern > pt) {
+                  pos.ch[chn].pattern--;
+                }
+              }
+            }
+            patUsageSet = new Set<number>(
+              [...patUsageSet].map(item => (item > pt) ? item - 1 : item)
+            );
+
+            p.patterns.splice(pt, 1);
+            break;
+          }
+        } while (pt > 0);
+      }
+
+      app.workingPattern = 0;
+      app.updateAfterActionButton();
+    }
+  });
+};
+//---------------------------------------------------------------------------------------
 Tracker.prototype.onCmdPosCreate = function() {
   if (this.modePlay) {
     return;
@@ -1387,7 +1458,7 @@ Tracker.prototype.onCmdPosCreate = function() {
   this.updateAfterActionButton();
 };
 //---------------------------------------------------------------------------------------
-Tracker.prototype.onCmdPosDuplicate = function() {
+Tracker.prototype.onCmdPosDuplicate = function(fn?: 'inPlace' | 'toStart' | 'toEnd') {
   if (this.modePlay) {
     return;
   }
@@ -1405,22 +1476,36 @@ Tracker.prototype.onCmdPosDuplicate = function() {
     pt.ch[chn].pitch = current.ch[chn].pitch;
   }
 
+  let newPos = i + 1;
+  switch (fn) {
+    case 'inPlace':
+      newPos = i;
+      break;
+    case 'toStart':
+      newPos = 0;
+      break;
+    case 'toEnd':
+      newPos = p.positions.length;
+      break;
+  }
+
   this.manager.historyPush({
     position: {
       type: 'create',
-      index: i
+      index: newPos
     }
   });
 
-  p.positions.splice(i, 0, pt);
-  p.countPositionFrames(i);
-  p.storePositionRuntime(i);
+  p.positions.splice(newPos, 0, pt);
+  p.countPositionFrames(newPos);
+  p.storePositionRuntime(newPos);
+  p.position = newPos;
   p.line = 0;
 
   this.updateAfterActionButton();
 };
 //---------------------------------------------------------------------------------------
-Tracker.prototype.onCmdPosDelete = function() {
+Tracker.prototype.onCmdPosDelete = function(fn?: 'allAter' | 'allBefore' | 'except' | 'all') {
   if (this.modePlay || !this.player.positions.length) {
     return;
   }
@@ -1432,32 +1517,54 @@ Tracker.prototype.onCmdPosDelete = function() {
   keys.inDialog = true;
   $('#dialog').confirm({
     title: i18n.dialog.position.delete.title,
-    text: i18n.dialog.position.delete.msg,
+    html: i18n.dialog.position.delete.msg[fn ? 'more' : 'one'],
     buttons: 'yesno',
-    style: 'info',
+    style: fn ? 'warning' : 'info',
     callback: (btn) => {
       keys.inDialog = false;
       if (btn !== 'yes') {
         return;
       }
 
-      const { ch, length, speed } = app.player.positions[pos];
-      app.manager.historyPush({
-        position: {
-          type: 'remove',
-          index: pos,
-          data: ch,
-          length,
-          speed,
-        }
-      });
+      if (fn) {
+        this.manager.historyClear();
 
-      app.player.line = 0;
-      app.player.positions.splice(pos, 1);
-      if (pos >= app.player.positions.length) {
-        app.player.position--;
+        switch (fn) {
+          case 'allAter':
+            app.player.positions.splice(pos + 1);
+            break;
+          //@ts-ignore no-break
+          case 'except':
+            app.player.positions.splice(pos + 1);
+          case 'allBefore':
+            app.player.positions.splice(0, pos);
+            app.player.position = 0;
+            break;
+          case 'all':
+            app.player.positions.splice(0);
+            app.player.position = 0;
+            break;
+        }
+      }
+      else {
+        const { ch, length, speed } = app.player.positions[pos];
+        app.manager.historyPush({
+          position: {
+            type: 'remove',
+            index: pos,
+            data: ch,
+            length,
+            speed,
+          }
+        });
+
+        app.player.positions.splice(pos, 1);
+        if (pos >= app.player.positions.length) {
+          app.player.position--;
+        }
       }
 
+      app.player.line = 0;
       app.updateAfterActionButton();
     }
   });
