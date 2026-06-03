@@ -770,6 +770,7 @@ Tracker.prototype.onCmdHardwareSerial = function() {
           clearInterval(updateInterval);
           updateInterval = null;
         }
+        this.serialStreamer.onDataReceived = null;
       });
 
     // Wire up button handlers - EXACTLY like working example pattern
@@ -825,6 +826,16 @@ Tracker.prototype.onCmdHardwareSerial = function() {
           log('<span style="color: green;"><b>Connected successfully!</b></span>');
           this.updateSerialPanel();
           this.updateSerialPortList();
+          this.serialStreamer.onDataReceived = (line) => {
+            const logEl = $('#serial-debug-log');
+            if (logEl.length) {
+              logEl.append(
+                '<div style="color: #888; font-size: 10px;">&#8592; ' +
+                $('<span>').text(line).html() + '</div>'
+              );
+              logEl.scrollTop(logEl[0].scrollHeight);
+            }
+          };
         }
         else {
           log('<span style="color: red;">Streamer connection failed</span>');
@@ -838,6 +849,7 @@ Tracker.prototype.onCmdHardwareSerial = function() {
     });
 
     $('#serial-disconnect').on('click', () => {
+      this.serialStreamer.onDataReceived = null;
       this.serialStreamer.disconnect();
       this.updateSerialPanel();
     });

@@ -26,12 +26,10 @@ npm install jquery@~2.2.4 bootstrap@~3.4.1 --legacy-peer-deps
 
 ## Running
 
-### Development server (hot reload disabled)
-
-Bootstraop 3's JavaScript has known incompatibilities with webpack's hot module replacement. Run with `--no-hot`:
+### Development server
 
 ```bash
-npm run dev -- --no-hot
+npm run dev
 ```
 
 Then open **http://localhost:3000** in Chrome or Edge (required for Web Serial API).

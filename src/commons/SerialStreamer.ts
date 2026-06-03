@@ -59,6 +59,8 @@ export default class SerialStreamer {
   private readonly MAX_DEBUG_LOG = 500;
   private lastDebugTime = 0;
   private debugThrottleMs = 100;
+  public onDataReceived: ((line: string) => void) | null = null;
+  private reader: any = null;
 
   constructor() {
     this.setupListeners();
@@ -229,6 +231,8 @@ export default class SerialStreamer {
         localStorage.setItem('saa1099_serial_pid', String(portInfo.usbProductId));
       }
 
+      this.startReadLoop();
+
       return true;
     }
     catch (error) {
@@ -274,10 +278,54 @@ export default class SerialStreamer {
     }
   }
 
+  private async startReadLoop(): Promise<void> {
+    if (!this.port?.readable) {
+      return;
+    }
+    this.reader = this.port.readable.getReader();
+    let buf = '';
+    try {
+      while (true) {
+        const { value, done } = await this.reader.read();
+        if (done) {
+          break;
+        }
+        buf += new TextDecoder().decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          const trimmed = line.replace(/\r$/, '');
+          if (trimmed && this.onDataReceived) {
+            this.onDataReceived(trimmed);
+          }
+        }
+      }
+    }
+    catch (error) {
+      this.addDebugLog('SerialStreamer', 'Read loop ended: ' + error);
+    }
+    finally {
+      if (this.reader) {
+        this.reader.releaseLock();
+        this.reader = null;
+      }
+    }
+  }
+
   /**
    * Disconnect from serial port - following working example pattern
    */
   public async disconnect(): Promise<void> {
+    if (this.reader) {
+      try {
+        await this.reader.cancel();
+      }
+      catch {
+        // ignore cancel errors
+      }
+      this.reader = null;
+    }
+
     if (this.port) {
       try {
         this.addDebugLog('SerialStreamer', 'Closing port...');
